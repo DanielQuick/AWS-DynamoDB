@@ -14,11 +14,13 @@ class AwsDynamodb {
     String keyAttributeTitle,
     dynamic keyAttributeValue,
   }) async {
+    print("querying!");
     var value = await _channel.invokeListMethod<Map>("query", {
       "table_name": tableName,
       "key_attribute_title": keyAttributeTitle,
       "key_attribute_value": keyAttributeValue,
     });
+    print(value);
 
     return value;
   }

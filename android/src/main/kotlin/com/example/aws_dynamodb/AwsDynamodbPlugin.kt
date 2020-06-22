@@ -15,6 +15,19 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 import com.amazonaws.mobile.client.AWSMobileClient
 import com.amazonaws.mobile.client.Callback
 import com.amazonaws.mobile.client.UserStateDetails
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient
+import com.amazonaws.services.dynamodbv2.model.QueryRequest
+import com.amazonaws.services.dynamodbv2.model.QueryResult
+import com.amazonaws.services.dynamodbv2.model.AttributeValue
+
+// import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+// import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+// import com.amazonaws.services.dynamodbv2.document.Item;
+// import com.amazonaws.services.dynamodbv2.document.ItemCollection;
+// import com.amazonaws.services.dynamodbv2.document.QueryOutcome;
+// import com.amazonaws.services.dynamodbv2.document.Table;
+// import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 
 /** AwsDynamodbPlugin */
 public class AwsDynamodbPlugin: FlutterPlugin, MethodCallHandler, ActivityAware {
@@ -65,9 +78,9 @@ public class AwsDynamodbPlugin: FlutterPlugin, MethodCallHandler, ActivityAware 
   }
 
   override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-    if (call.method == "initialize") {
+    if (call.method.equals("initialize")) {
       initialize(call, result)
-    } else if (call.method == "query") {
+    } else if (call.method.equals("query")) {
       query(call, result)
     } else if (call.method == "batchGet") {
       batchGet(call, result)
@@ -108,6 +121,91 @@ public class AwsDynamodbPlugin: FlutterPlugin, MethodCallHandler, ActivityAware 
   }
 
   fun query(@NonNull call: MethodCall, @NonNull result: Result) {
+    val arguments = call.arguments as HashMap<String,Any>;
+    var tableName = ""
+    var keyAttributeTitle = ""
+    var keyAttributeValue : Any? = null
+
+    if(arguments.containsKey("table_name")) {
+      tableName = arguments["table_name"] as String
+    }
+    if(arguments.containsKey("key_attribute_title")) {
+      keyAttributeTitle = arguments["key_attribute_title"] as String
+    }
+    if(arguments.containsKey("key_attribute_value")) {
+      keyAttributeValue = arguments["key_attribute_value"]
+    }
+
+    val keyAttribute = AttributeValue()
+    if (keyAttributeValue is String) {
+      val test = keyAttributeValue.toDoubleOrNull()
+      if (test != null) {
+        keyAttribute.setN(keyAttributeValue)
+      } else {
+        keyAttribute.setS(keyAttributeValue)
+      }
+    }
+
+    var nameMap = HashMap<String, String>()
+    nameMap.put("#p", keyAttributeTitle)
+    var valueMap = HashMap<String, AttributeValue>()
+    valueMap.put(":keyVal", keyAttribute)
+
+    val client = AmazonDynamoDBClient()
+    val request = QueryRequest(tableName)
+    request.setKeyConditionExpression("#p = :keyVal")
+    request.setExpressionAttributeNames(nameMap)
+    request.setExpressionAttributeValues(valueMap)
+    try {
+      val queryResult = client.query(request)
+      
+      val list = mutableListOf<HashMap<String,String>>()
+      for (item in queryResult.getItems()) {
+        val map = HashMap<String,String>()
+        map.put("title", "test")
+        list.add(map)
+      }
+
+      activity!!.runOnUiThread(java.lang.Runnable {
+        result.success(list)
+      })
+    } catch (e : Exception) {
+      print(e)
+      result.error("0", e.toString(), null)
+    }
+
+
+
+
+
+
+
+
+
+    // Table table = client.getTable(tableName)
+
+    // var nameMap = new HashMap<String, String>()
+    // nameMap.put("#p", keyAttributeTitle)
+    // var valueMap = new HashMap<String, Object>()
+    // valueMap.put(":keyVal", keyAttributeValue)
+
+    // var querySpec = new QuerySpec().withKeyConditionExression("#p = :keyVal").withNameMap(nameMap).withValueMap(valueMap)
+
+    // try {
+    //   var items = table.query(QuerySpec)
+    //   print(items)
+    //   result.success(true)
+    // } catch(e : Exception) {
+    //   print(e.toString())
+    //   result.error(e)
+    // }
+
+    // result.success(false)
+
+
+
+
+
     // let args = call.arguments as? NSDictionary
         
     // let tableName: String = (args?.value(forKey: "table_name") as? String) ?? ""
